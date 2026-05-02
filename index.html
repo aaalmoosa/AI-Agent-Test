@@ -30,4 +30,126 @@
   .result-card { background: rgba(4,18,38,0.95); border: 1px solid #102030; border-radius: 4px; padding: 10px 12px; cursor: pointer; }
   .result-card:active { border-color: #3080c0; }
   .sat-name { font-size: 13px; color: #70c0ff; font-weight: bold; margin-bottom: 6px; }
-  .sat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3
+  .sat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 10px; font-size: 10px; }
+  .sat-field { color: #486080; }
+  .sat-value { color: #90c8e8; }
+  .sat-status { display: inline-block; margin-top: 6px; padding: 2px 7px; border-radius: 10px; font-size: 9px; font-weight: bold; }
+  .s-active   { background: rgba(0,200,100,0.15); color: #00c864; border: 1px solid #00c864; }
+  .s-inactive { background: rgba(200,50,50,0.15);  color: #c84040; border: 1px solid #c84040; }
+  .s-partial  { background: rgba(200,150,0,0.15);  color: #c8a000; border: 1px solid #c8a000; }
+  .s-unknown  { background: rgba(80,100,120,0.15); color: #608090; border: 1px solid #608090; }
+  .orbit-row { margin-top: 6px; padding-top: 6px; border-top: 1px solid #0e2030; display: flex; gap: 10px; font-size: 10px; flex-wrap: wrap; }
+  .o-label { color: #406080; }
+  .o-value { color: #70a8d0; }
+  .viz-btn { margin-top: 8px; width: 100%; padding: 6px; background: rgba(20,60,120,0.5); border: 1px solid #2858a0; color: #60b0f0; font-size: 11px; cursor: pointer; border-radius: 3px; font-family: inherit; }
+  .info-bar  { padding: 8px 12px; background: rgba(4,18,38,0.7); border: 1px solid #0e2030; border-radius: 4px; font-size: 11px; color: #407090; }
+  .error-bar { padding: 10px 12px; background: rgba(80,10,10,0.5); border: 1px solid #602020; border-radius: 4px; font-size: 11px; color: #e06060; line-height: 1.6; }
+  #viewer { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:#010810; z-index:100; flex-direction:column; }
+  #viewer.open { display: flex; }
+  #viewer-header { padding: 10px 14px; background: rgba(4,12,24,0.95); border-bottom: 1px solid #142840; display: flex; align-items: center; gap: 10px; flex-shrink: 0; z-index: 10; }
+  #viewer-title { flex:1; font-size: 12px; color: #50a0f0; letter-spacing: 0.1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #viewer-close { background: transparent; border: 1px solid #2a4060; color: #6090c0; padding: 6px 12px; cursor: pointer; font-family: inherit; font-size: 12px; border-radius: 3px; }
+  #canvas-wrap { flex:1; position: relative; overflow: hidden; }
+  #three-canvas { width:100%; height:100%; display:block; touch-action: none; }
+  #viewer-info { position: absolute; bottom: 80px; left: 12px; background: rgba(4,12,24,0.88); border: 1px solid #1a3050; padding: 8px 12px; border-radius: 4px; font-size: 10px; color: #6090b0; line-height: 1.9; pointer-events: none; max-width: 200px; }
+  #viewer-info b { color: #80c0f0; font-size: 11px; }
+  #zoom-controls { position: absolute; bottom: 20px; right: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .zoom-btn { width: 44px; height: 44px; background: rgba(10,30,60,0.9); border: 1px solid #2a5080; color: #60a0e0; font-size: 22px; cursor: pointer; border-radius: 8px; display: flex; align-items: center; justify-content: center; user-select: none; -webkit-user-select: none; }
+  .zoom-btn:active { background: rgba(30,70,130,0.9); }
+  #loading-3d { position: absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:12px; color:#4080a0; text-align:center; }
+  #loading-3d span { display: block; font-size: 32px; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+<div id="header">
+  <span style="font-size:18px">🛰️</span>
+  <div><h1>CELESTRAK SATELLITE SEARCH</h1><p>TAP A CARD TO VIEW 3D ORBIT</p></div>
+  <div id="dot"></div>
+</div>
+<div id="search-bar">
+  <input id="search-input" placeholder="Name, NORAD ID, or group…" onkeydown="if(event.key==='Enter')search()" />
+  <button id="search-btn" onclick="search()">🔍</button>
+</div>
+<div id="chips">
+  <button class="chip" onclick="go('25544','catnr')">🛸 ISS</button>
+  <button class="chip" onclick="go('HUBBLE','name')">🔭 Hubble</button>
+  <button class="chip" onclick="go('starlink','group')">🌐 Starlink</button>
+  <button class="chip" onclick="go('gps-ops','group')">📡 GPS</button>
+  <button class="chip" onclick="go('TIANGONG','name')">🇨🇳 Tiangong</button>
+  <button class="chip" onclick="go('stations','group')">🏠 Stations</button>
+  <button class="chip" onclick="go('weather','group')">🌦 Weather</button>
+</div>
+<div id="main">
+  <div id="results">
+    <div id="welcome">
+      <div class="globe">🌍</div>
+      <h2>SATELLITE CATALOG SEARCH</h2>
+      <p>Search 25,000+ tracked objects.<br>Tap any result to see its 3D orbit.</p>
+    </div>
+  </div>
+</div>
+<div id="viewer">
+  <div id="viewer-header">
+    <div id="viewer-title">ORBIT VISUALIZATION</div>
+    <button id="viewer-close" onclick="closeViewer()">✕ CLOSE</button>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="three-canvas"></canvas>
+    <div id="loading-3d"><span>🌍</span>Loading orbit data…</div>
+    <div id="viewer-info"></div>
+    <div id="zoom-controls">
+      <button class="zoom-btn" ontouchstart="startZoom(1)" ontouchend="stopZoom()" onmousedown="startZoom(1)" onmouseup="stopZoom()">＋</button>
+      <button class="zoom-btn" ontouchstart="startZoom(-1)" ontouchend="stopZoom()" onmousedown="startZoom(-1)" onmouseup="stopZoom()">－</button>
+    </div>
+  </div>
+</div>
+<script>
+const PROXY="https://corsproxy.io/?url=";
+const SATCAT="https://celestrak.org/satcat/records.php";
+const GP="https://celestrak.org/NORAD/elements/gp.php";
+const EARTH_TEXTURE="https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/textures/planets/earth_atmos_2048.jpg";
+const EARTH_NORMAL="https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/textures/planets/earth_normal_2048.jpg";
+const EARTH_SPECULAR="https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/textures/planets/earth_specular_2048.jpg";
+const CLOUDS_TEXTURE="https://raw.githubusercontent.com/mrdoob/three.js/r128/examples/textures/planets/earth_clouds_1024.png";
+const STATUS={"+":["Active","s-active"],"-":["Inactive","s-inactive"],"P":["Partial","s-partial"],"B":["Backup","s-partial"],"S":["Standby","s-partial"],"X":["Extended","s-active"],"D":["Decayed","s-inactive"],"?":["Unknown","s-unknown"]};
+const TYPES={PAY:"Payload","R/B":"Rocket Body",DEB:"Debris",UNK:"Unknown"};
+function setBusy(b){document.getElementById("dot").className=b?"busy":"";document.getElementById("search-btn").disabled=b;document.getElementById("search-input").disabled=b;}
+function show(html){document.getElementById("results").innerHTML=html;}
+function badge(code){const[label,cls]=STATUS[code]||["Unknown","s-unknown"];return`<span class="sat-status ${cls}">${label}</span>`;}
+function cardSatcat(s){const name=s.OBJECT_NAME||"Unknown";const catnr=s.NORAD_CAT_ID||"";const intdes=s.OBJECT_ID||"—";const country=s.COUNTRY||"—";const launch=s.LAUNCH_DATE||"—";const type=TYPES[s.OBJECT_TYPE]||s.OBJECT_TYPE||"—";const status=s.OPS_STATUS_CODE||"?";const period=s.PERIOD?s.PERIOD+" min":"—";const inc=s.INCLINATION?s.INCLINATION+"°":"—";const apogee=s.APOGEE?s.APOGEE+"":"";const perigee=s.PERIGEE?s.PERIGEE+"":"";const data=encodeURIComponent(JSON.stringify({name,catnr,inc,apogee,perigee}));return`<div class="result-card" onclick="openViewer('${data}')"><div class="sat-name">${name}</div><div class="sat-grid"><span class="sat-field">NORAD ID</span><span class="sat-value">${catnr||"—"}</span><span class="sat-field">Int'l Des.</span><span class="sat-value">${intdes}</span><span class="sat-field">Country</span><span class="sat-value">${country}</span><span class="sat-field">Type</span><span class="sat-value">${type}</span><span class="sat-field">Launched</span><span class="sat-value">${launch}</span></div>${badge(status)}<div class="orbit-row"><div><span class="o-label">Period </span><span class="o-value">${period}</span></div><div><span class="o-label">Incl. </span><span class="o-value">${inc}</span></div><div><span class="o-label">Apogee </span><span class="o-value">${apogee?apogee+" km":"—"}</span></div><div><span class="o-label">Perigee </span><span class="o-value">${perigee?perigee+" km":"—"}</span></div></div><button class="viz-btn" onclick="event.stopPropagation();openViewer('${data}')">🌍 View 3D Orbit</button></div>`;}
+function cardGP(s){const name=s.OBJECT_NAME||"Unknown";const catnr=s.NORAD_CAT_ID||"";const epoch=s.EPOCH?s.EPOCH.slice(0,10):"—";const inc=s.INCLINATION?parseFloat(s.INCLINATION).toFixed(1)+"°":"—";const alt=s.SEMIMAJOR_AXIS?Math.round(parseFloat(s.SEMIMAJOR_AXIS)-6371)+" km":"—";const data=encodeURIComponent(JSON.stringify({name,catnr,inc,alt}));return`<div class="result-card" onclick="openViewer('${data}')"><div class="sat-name">${name}</div><div class="sat-grid"><span class="sat-field">NORAD ID</span><span class="sat-value">${catnr||"—"}</span><span class="sat-field">TLE Epoch</span><span class="sat-value">${epoch}</span><span class="sat-field">Inclination</span><span class="sat-value">${inc}</span><span class="sat-field">Altitude</span><span class="sat-value">${alt}</span></div><button class="viz-btn" onclick="event.stopPropagation();openViewer('${data}')">🌍 View 3D Orbit</button></div>`;}
+async function go(query,type){document.getElementById("search-input").value=query;setBusy(true);show(`<div class="info-bar">⟳ Searching for "${query}"…</div>`);try{if(type==="catnr"){const d=await fetch(PROXY+encodeURIComponent(`${SATCAT}?CATNR=${query}&FORMAT=JSON`)).then(r=>r.json());show(d.length?`<div class="info-bar">Found ${d.length} result${d.length>1?"s":""} — tap to view orbit</div>`+d.map(cardSatcat).join(""):`<div class="error-bar">No results.</div>`);}else if(type==="intdes"){const d=await fetch(PROXY+encodeURIComponent(`${SATCAT}?INTDES=${query}&FORMAT=JSON`)).then(r=>r.json());show(d.length?`<div class="info-bar">Found ${d.length} result${d.length>1?"s":""} — tap to view orbit</div>`+d.map(cardSatcat).join(""):`<div class="error-bar">No results.</div>`);}else if(type==="group"){const d=await fetch(PROXY+encodeURIComponent(`${GP}?GROUP=${query}&FORMAT=JSON`)).then(r=>r.json());const slice=d.slice(0,30);show(`<div class="info-bar">Showing ${slice.length} of ${d.length} in <b>${query}</b> — tap to view orbit</div>`+slice.map(cardGP).join(""));}else{const d=await fetch(PROXY+encodeURIComponent(`${SATCAT}?NAME=${encodeURIComponent(query)}&FORMAT=JSON&MAX=20`)).then(r=>r.json());show(d.length?`<div class="info-bar">Found ${d.length} result${d.length>1?"s":""} — tap to view orbit</div>`+d.map(cardSatcat).join(""):`<div class="error-bar">No results for "${query}".</div>`);}}catch(e){show(`<div class="error-bar">❌ ${e.message}<br>Proxy may be temporarily unavailable. Try again.</div>`);}setBusy(false);}
+function search(){const q=document.getElementById("search-input").value.trim();if(!q)return;if(/^\d{4,6}$/.test(q))go(q,"catnr");else if(/^\d{4}-\d{3}/.test(q))go(q,"intdes");else go(q,"name");}
+let threeCtx=null,zoomInterval=null;
+function startZoom(dir){stopZoom();zoomInterval=setInterval(()=>{if(!threeCtx)return;const cam=threeCtx.camera;const min=7000,max=60000;const speed=cam.position.length()*0.03;const newLen=Math.min(max,Math.max(min,cam.position.length()-dir*speed));cam.position.normalize().multiplyScalar(newLen);},16);}
+function stopZoom(){if(zoomInterval){clearInterval(zoomInterval);zoomInterval=null;}}
+function closeViewer(){stopZoom();document.getElementById("viewer").classList.remove("open");if(threeCtx){cancelAnimationFrame(threeCtx.animId);threeCtx.renderer.dispose();threeCtx=null;}}
+async function openViewer(dataStr){const sat=JSON.parse(decodeURIComponent(dataStr));document.getElementById("viewer").classList.add("open");document.getElementById("viewer-title").textContent=sat.name;document.getElementById("loading-3d").style.display="block";document.getElementById("viewer-info").innerHTML="";let tle1=null,tle2=null;if(sat.catnr){try{const url=PROXY+encodeURIComponent(`${GP}?CATNR=${sat.catnr}&FORMAT=TLE`);const text=await fetch(url).then(r=>r.text());const lines=text.trim().split("\n").map(l=>l.trim()).filter(Boolean);for(const line of lines){if(line.startsWith("1 ")&&line.length>60)tle1=line;if(line.startsWith("2 ")&&line.length>60)tle2=line;}}catch(e){console.warn("TLE fetch failed:",e);}}document.getElementById("loading-3d").style.display="none";initThree(sat,tle1,tle2);}
+function initThree(sat,tle1,tle2){if(threeCtx){cancelAnimationFrame(threeCtx.animId);threeCtx.renderer.dispose();}
+const wrap=document.getElementById("canvas-wrap");const canvas=document.getElementById("three-canvas");const W=wrap.clientWidth,H=wrap.clientHeight;
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setSize(W,H);renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+const scene=new THREE.Scene();const camera=new THREE.PerspectiveCamera(45,W/H,100,200000);camera.position.set(0,0,22000);
+threeCtx={renderer,camera,animId:null};
+const starPos=new Float32Array(6000);for(let i=0;i<starPos.length;i++)starPos[i]=(Math.random()-0.5)*400000;const starGeo=new THREE.BufferGeometry();starGeo.setAttribute("position",new THREE.BufferAttribute(starPos,3));scene.add(new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:80})));
+const loader=new THREE.TextureLoader();
+const earth=new THREE.Mesh(new THREE.SphereGeometry(6371,64,64),new THREE.MeshPhongMaterial({map:loader.load(EARTH_TEXTURE),normalMap:loader.load(EARTH_NORMAL),specularMap:loader.load(EARTH_SPECULAR),specular:new THREE.Color(0x333333),shininess:15}));scene.add(earth);
+const clouds=new THREE.Mesh(new THREE.SphereGeometry(6430,64,64),new THREE.MeshPhongMaterial({map:loader.load(CLOUDS_TEXTURE),transparent:true,opacity:0.4,depthWrite:false}));scene.add(clouds);
+scene.add(new THREE.Mesh(new THREE.SphereGeometry(6600,32,32),new THREE.MeshPhongMaterial({color:0x4488ff,transparent:true,opacity:0.07,side:THREE.FrontSide})));
+scene.add(new THREE.AmbientLight(0x334455,1.2));const sun=new THREE.DirectionalLight(0xffffff,2.0);sun.position.set(60000,20000,40000);scene.add(sun);
+if(tle1&&tle2){try{const satrec=satellite.twoline2satrec(tle1,tle2);const periodMin=(2*Math.PI/satrec.no);const now=new Date();const points=[];for(let i=0;i<=200;i++){const t=new Date(now.getTime()+(i/200)*periodMin*60000);const pv=satellite.propagate(satrec,t);if(pv&&pv.position)points.push(new THREE.Vector3(pv.position.x,pv.position.z,-pv.position.y));}if(points.length>2)scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),new THREE.LineBasicMaterial({color:0x00ccff,transparent:true,opacity:0.75})));const pv=satellite.propagate(satrec,now);if(pv&&pv.position){const pos=new THREE.Vector3(pv.position.x,pv.position.z,-pv.position.y);const satMesh=new THREE.Mesh(new THREE.SphereGeometry(200,16,16),new THREE.MeshBasicMaterial({color:0xff3300}));satMesh.position.copy(pos);scene.add(satMesh);const halo=new THREE.Mesh(new THREE.SphereGeometry(340,16,16),new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.3}));halo.position.copy(pos);scene.add(halo);scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0),pos]),new THREE.LineBasicMaterial({color:0xff3300,transparent:true,opacity:0.2})));const dist=pos.length();camera.position.copy(pos.clone().normalize().multiplyScalar(dist*1.8+5000));camera.lookAt(0,0,0);const gmst=satellite.gstime(now);const geo=satellite.eciToGeodetic(pv.position,gmst);const lat=satellite.degreesLat(geo.latitude).toFixed(2);const lon=satellite.degreesLong(geo.longitude).toFixed(2);const alt=Math.round(geo.height);const spd=Math.round(Math.sqrt(pv.velocity.x**2+pv.velocity.y**2+pv.velocity.z**2)*3600/1000);document.getElementById("viewer-info").innerHTML=`<b>${sat.name}</b><br>🌐 ${lat}°, ${lon}°<br>📏 Alt: ${alt} km<br>💨 ${spd.toLocaleString()} km/h<br>🔴 Live position`;}}catch(e){document.getElementById("viewer-info").innerHTML=`<b>${sat.name}</b><br>Orbit error: ${e.message}`;}}else{const apogee=sat.apogee?parseInt(sat.apogee):500;const perigee=sat.perigee?parseInt(sat.perigee):500;const inc=sat.inc?parseFloat(sat.inc)*Math.PI/180:0.9;const a=6371+(apogee+perigee)/2;const e=Math.max(0,(apogee-perigee)/(2*a));const pts=[];for(let i=0;i<=200;i++){const theta=(i/200)*2*Math.PI;const r=a*(1-e*e)/(1+e*Math.cos(theta));pts.push(new THREE.Vector3(r*Math.cos(theta),r*Math.sin(theta)*Math.sin(inc),r*Math.sin(theta)*Math.cos(inc)));}scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:0x00ccff,transparent:true,opacity:0.75})));camera.position.set(0,a*0.6,a*1.8);camera.lookAt(0,0,0);document.getElementById("viewer-info").innerHTML=`<b>${sat.name}</b><br>Estimated orbit<br>(no live TLE)`;}
+let isDragging=false,prevX=0,prevY=0,rotX=0,rotY=0;
+canvas.addEventListener("touchstart",e=>{if(e.touches.length===1){isDragging=true;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;}},{passive:true});
+canvas.addEventListener("touchmove",e=>{if(isDragging&&e.touches.length===1){rotY+=(e.touches[0].clientX-prevX)*0.006;rotX+=(e.touches[0].clientY-prevY)*0.006;prevX=e.touches[0].clientX;prevY=e.touches[0].clientY;}},{passive:true});
+canvas.addEventListener("touchend",()=>isDragging=false);
+canvas.addEventListener("mousedown",e=>{isDragging=true;prevX=e.clientX;prevY=e.clientY;});
+canvas.addEventListener("mousemove",e=>{if(!isDragging)return;rotY+=(e.clientX-prevX)*0.005;rotX+=(e.clientY-prevY)*0.005;prevX=e.clientX;prevY=e.clientY;});
+canvas.addEventListener("mouseup",()=>isDragging=false);
+let lastPinchDist=0;
+canvas.addEventListener("touchstart",e=>{if(e.touches.length===2){isDragging=false;lastPinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}},{passive:true});
+canvas.addEventListener("touchmove",e=>{if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);const min=7000,max=60000;const newLen=Math.min(max,Math.max(min,camera.position.length()*(lastPinchDist/d)));camera.position.normalize().multiplyScalar(newLen);lastPinchDist=d;}},{passive:true});
+canvas.addEventListener("wheel",e=>{const min=7000,max=60000;const speed=camera.position.length()*0.001;const newLen=Math.min(max,Math.max(min,camera.position.length()+e.deltaY*speed));camera.position.normalize().multiplyScalar(newLen);e.preventDefault();},{passive:false});
+function animate(){threeCtx.animId=requestAnimationFrame(animate);earth.rotation.y+=0.0008;clouds.rotation.y+=0.0009;if(Math.abs(rotX)>0.0001||Math.abs(rotY)>0.0001){const sph=new THREE.Spherical().setFromVector3(camera.position);sph.theta-=rotY*0.4;sph.phi=Math.max(0.05,Math.min(Math.PI-0.05,sph.phi+rotX*0.4));rotX*=0.88;rotY*=0.88;camera.position.setFromSpherical(sph);camera.lookAt(0,0,0);}renderer.render(scene,camera);}
+animate();}
+</script>
+</body>
+</html>
