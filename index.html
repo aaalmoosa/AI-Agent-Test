@@ -3,246 +3,192 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Celestrak SATCAT Agent</title>
+<title>Celestrak Satellite Search</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #07101f; color: #b8d4ee; font-family: 'Courier New', monospace; height: 100dvh; display: flex; flex-direction: column; }
-  #header { padding: 12px 18px; border-bottom: 1px solid #142840; background: #040c18; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+
+  #header { padding: 14px 18px; border-bottom: 1px solid #142840; background: #040c18; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
   #header h1 { font-size: 13px; color: #50a0f0; letter-spacing: 0.12em; }
   #header p  { font-size: 9px; color: #284060; }
-  #dot { width:7px; height:7px; border-radius:50%; background:#00e87a; box-shadow:0 0 5px #00e87a; margin-left:auto; transition: all 0.3s; }
-  #dot.busy { background:#f0a030; box-shadow:0 0 5px #f0a030; }
-  #api-bar { padding:10px 16px; background:#040c18; border-bottom:1px solid #142840; display:flex; gap:8px; align-items:center; flex-shrink:0; }
-  #api-key { flex:1; background:rgba(8,22,44,0.95); border:1px solid #1a3858; color:#b8d4ee; padding:8px 12px; font-size:12px; font-family:inherit; outline:none; border-radius:3px; }
-  #save-key { background:#184070; border:1px solid #2858a0; color:#50a0f0; padding:8px 12px; font-size:11px; cursor:pointer; font-family:inherit; border-radius:3px; white-space:nowrap; }
-  #key-status { font-size:10px; color:#28906a; white-space:nowrap; }
-  #messages { flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px; }
-  .bubble { max-width:88%; padding:10px 14px; font-size:13px; line-height:1.8; white-space:pre-wrap; border-radius:4px; }
-  .user { align-self:flex-end; background:rgba(25,65,115,0.5); border:1px solid #254878; color:#80b8e8; }
-  .bot  { align-self:flex-start; background:rgba(4,18,38,0.95); border:1px solid #102030; color:#b8d4ee; }
-  .bot-label { font-size:8px; color:#286088; margin-bottom:5px; letter-spacing:0.15em; }
-  .status-bubble { align-self:flex-start; padding:6px 12px; background:rgba(4,18,38,0.95); border:1px solid #103040; font-size:10px; color:#28906a; border-radius:3px; font-style:italic; }
-  #chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
-  .chip { background:transparent; border:1px solid #1a3a5a; color:#3888c0; padding:6px 14px; font-size:12px; cursor:pointer; border-radius:3px; font-family:inherit; }
-  #input-row { padding:12px 16px; border-top:1px solid #142840; background:#040c18; display:flex; gap:8px; flex-shrink:0; }
-  #input { flex:1; background:rgba(8,22,44,0.95); border:1px solid #1a3858; color:#b8d4ee; padding:10px 13px; font-size:14px; font-family:inherit; outline:none; border-radius:3px; }
-  #send-btn { background:#184070; border:1px solid #2858a0; color:#50a0f0; padding:10px 18px; font-size:16px; cursor:pointer; border-radius:3px; }
-  #send-btn:disabled { background:#080f1e; color:#283850; cursor:not-allowed; }
+  #dot { width:7px; height:7px; border-radius:50%; background:#00e87a; box-shadow:0 0 6px #00e87a; margin-left:auto; transition:all 0.3s; }
+  #dot.busy { background:#f0a030; box-shadow:0 0 6px #f0a030; }
+
+  #search-bar { padding: 12px 16px; background: #040c18; border-bottom: 1px solid #142840; display: flex; gap: 8px; flex-shrink: 0; }
+  #search-input { flex:1; background: rgba(8,22,44,0.95); border: 1px solid #1a3858; color: #b8d4ee; padding: 10px 13px; font-size: 14px; font-family: inherit; outline: none; border-radius: 4px; }
+  #search-btn { background: #184070; border: 1px solid #2858a0; color: #50a0f0; padding: 10px 16px; font-size: 14px; cursor: pointer; border-radius: 4px; }
+  #search-btn:disabled { background: #080f1e; color: #283850; cursor: not-allowed; }
+
+  #chips { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid #0e1e30; flex-shrink: 0; }
+  .chip { background: transparent; border: 1px solid #1a3a5a; color: #3888c0; padding: 5px 12px; font-size: 11px; cursor: pointer; border-radius: 20px; font-family: inherit; }
+  .chip:active { background: #102840; }
+
+  #results { flex:1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+  #welcome { text-align: center; padding: 40px 20px; }
+  #welcome .globe { font-size: 56px; margin-bottom: 12px; }
+  #welcome h2 { font-size: 14px; color: #50a0f0; letter-spacing: 0.1em; margin-bottom: 8px; }
+  #welcome p { font-size: 11px; color: #284060; line-height: 1.6; }
+
+  .result-card { background: rgba(4,18,38,0.95); border: 1px solid #102030; border-radius: 4px; padding: 12px 14px; }
+  .sat-name { font-size: 14px; color: #70c0ff; font-weight: bold; margin-bottom: 8px; }
+  .sat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; font-size: 11px; }
+  .sat-field { color: #486080; }
+  .sat-value { color: #90c8e8; }
+  .sat-status { display: inline-block; margin-top: 8px; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+  .s-active   { background: rgba(0,200,100,0.15); color: #00c864; border: 1px solid #00c864; }
+  .s-inactive { background: rgba(200,50,50,0.15);  color: #c84040; border: 1px solid #c84040; }
+  .s-partial  { background: rgba(200,150,0,0.15);  color: #c8a000; border: 1px solid #c8a000; }
+  .s-unknown  { background: rgba(80,100,120,0.15); color: #608090; border: 1px solid #608090; }
+  .orbit-row { margin-top: 8px; padding-top: 8px; border-top: 1px solid #0e2030; display: flex; gap: 12px; font-size: 10px; flex-wrap: wrap; }
+  .orbit-item .o-label { color: #406080; }
+  .orbit-item .o-value { color: #70a8d0; }
+  .info-bar  { padding: 8px 14px; background: rgba(4,18,38,0.7); border: 1px solid #0e2030; border-radius: 4px; font-size: 11px; color: #407090; }
+  .error-bar { padding: 10px 14px; background: rgba(80,10,10,0.5); border: 1px solid #602020; border-radius: 4px; font-size: 12px; color: #e06060; line-height: 1.6; }
 </style>
 </head>
 <body>
 
 <div id="header">
   <span style="font-size:20px">🛰️</span>
-  <div><h1>CELESTRAK SATCAT AGENT</h1><p>LIVE SATELLITE CATALOG</p></div>
+  <div><h1>CELESTRAK SATELLITE SEARCH</h1><p>FREE · NO API KEY NEEDED</p></div>
   <div id="dot"></div>
 </div>
 
-<div id="api-bar">
-  <input id="api-key" type="password" placeholder="Paste Anthropic API key…" autocomplete="off" />
-  <button id="save-key" onclick="saveKey()">SAVE KEY</button>
-  <span id="key-status"></span>
+<div id="search-bar">
+  <input id="search-input" placeholder="Name, NORAD ID, or group…" onkeydown="if(event.key==='Enter')search()" />
+  <button id="search-btn" onclick="search()">🔍</button>
 </div>
 
-<div id="messages">
-  <div class="bubble bot">
-    <div class="bot-label">◈ SATCAT AGENT</div>Welcome! Paste your Anthropic API key above and tap SAVE KEY to get started.
-
-Then ask me anything about satellites — by name, NORAD number, or group.
-  </div>
-  <div id="chips">
-    <button class="chip" onclick="send('International Space Station')">🛸 ISS</button>
-    <button class="chip" onclick="send('Hubble Space Telescope')">🔭 Hubble</button>
-    <button class="chip" onclick="send('Show me Starlink satellites')">🌐 Starlink</button>
-    <button class="chip" onclick="send('GPS satellites')">📡 GPS</button>
-    <button class="chip" onclick="send('Tiangong space station')">🇨🇳 Tiangong</button>
-  </div>
+<div id="chips">
+  <button class="chip" onclick="go('25544','catnr')">🛸 ISS</button>
+  <button class="chip" onclick="go('HUBBLE','name')">🔭 Hubble</button>
+  <button class="chip" onclick="go('starlink','group')">🌐 Starlink</button>
+  <button class="chip" onclick="go('gps-ops','group')">📡 GPS</button>
+  <button class="chip" onclick="go('TIANGONG','name')">🇨🇳 Tiangong</button>
+  <button class="chip" onclick="go('stations','group')">🏠 Stations</button>
+  <button class="chip" onclick="go('weather','group')">🌦 Weather</button>
+  <button class="chip" onclick="go('iridium','group')">📶 Iridium</button>
 </div>
 
-<div id="input-row">
-  <input id="input" placeholder="Ask about any satellite…" onkeydown="if(event.key==='Enter')send(this.value)" />
-  <button id="send-btn" onclick="send(document.getElementById('input').value)">▶</button>
+<div id="results">
+  <div id="welcome">
+    <div class="globe">🌍</div>
+    <h2>SATELLITE CATALOG SEARCH</h2>
+    <p>Search 25,000+ tracked objects in Earth orbit.<br>Completely free — no account or key needed.</p>
+  </div>
 </div>
 
 <script>
-const PROXY = "https://corsproxy.io/?url=";
-const SATCAT_URL = "https://celestrak.org/satcat/records.php";
-const GP_URL     = "https://celestrak.org/NORAD/elements/gp.php";
-const CLAUDE_URL = "https://api.anthropic.com/v1/messages";
+const PROXY  = "https://corsproxy.io/?url=";
+const SATCAT = "https://celestrak.org/satcat/records.php";
+const GP     = "https://celestrak.org/NORAD/elements/gp.php";
 
-let apiKey  = localStorage.getItem("satcat_key") || "";
-let history = [];
-let busy    = false;
+const STATUS = {
+  "+": ["Active","s-active"], "-": ["Inactive","s-inactive"],
+  "P": ["Partial","s-partial"], "B": ["Backup","s-partial"],
+  "S": ["Standby","s-partial"], "X": ["Extended","s-active"],
+  "D": ["Decayed","s-inactive"], "?": ["Unknown","s-unknown"]
+};
 
-if (apiKey) {
-  document.getElementById("api-key").value = "••••••••••••••••";
-  document.getElementById("key-status").textContent = "✓ Key ready";
-}
-
-function saveKey() {
-  const val = document.getElementById("api-key").value.trim();
-  if (!val || val.startsWith("•")) return;
-  apiKey = val;
-  localStorage.setItem("satcat_key", apiKey);
-  document.getElementById("api-key").value = "••••••••••••••••";
-  document.getElementById("key-status").textContent = "✓ Saved!";
-}
+const TYPES = { PAY:"Payload", "R/B":"Rocket Body", DEB:"Debris", UNK:"Unknown" };
 
 function setBusy(b) {
-  busy = b;
   document.getElementById("dot").className = b ? "busy" : "";
-  document.getElementById("send-btn").disabled = b;
-  document.getElementById("input").disabled = b;
+  document.getElementById("search-btn").disabled = b;
+  document.getElementById("search-input").disabled = b;
 }
 
-function addMsg(role, text) {
-  const d = document.createElement("div");
-  d.className = "bubble " + role;
-  if (role === "bot") {
-    const label = document.createElement("div");
-    label.className = "bot-label";
-    label.textContent = "◈ SATCAT AGENT";
-    d.appendChild(label);
-    const content = document.createElement("div");
-    content.textContent = text;
-    d.appendChild(content);
-  } else {
-    d.textContent = text;
-  }
-  document.getElementById("messages").appendChild(d);
-  d.scrollIntoView({ behavior: "smooth" });
-  return d;
+function show(html) { document.getElementById("results").innerHTML = html; }
+
+function badge(code) {
+  const [label, cls] = STATUS[code] || ["Unknown","s-unknown"];
+  return `<span class="sat-status ${cls}">${label}</span>`;
 }
 
-let statusEl = null;
-function setStatus(text) {
-  if (statusEl) { statusEl.remove(); statusEl = null; }
-  if (!text) return;
-  statusEl = document.createElement("div");
-  statusEl.className = "status-bubble";
-  statusEl.textContent = text;
-  document.getElementById("messages").appendChild(statusEl);
-  statusEl.scrollIntoView({ behavior: "smooth" });
+function cardSatcat(s) {
+  const name   = s.OBJECT_NAME || "Unknown";
+  const catnr  = s.NORAD_CAT_ID || "—";
+  const intdes = s.OBJECT_ID || "—";
+  const country= s.COUNTRY || "—";
+  const launch = s.LAUNCH_DATE || "—";
+  const type   = TYPES[s.OBJECT_TYPE] || s.OBJECT_TYPE || "—";
+  const status = s.OPS_STATUS_CODE || "?";
+  const period = s.PERIOD ? s.PERIOD+" min" : "—";
+  const inc    = s.INCLINATION ? s.INCLINATION+"°" : "—";
+  const apogee = s.APOGEE ? s.APOGEE+" km" : "—";
+  const perigee= s.PERIGEE ? s.PERIGEE+" km" : "—";
+  return `<div class="result-card">
+    <div class="sat-name">${name}</div>
+    <div class="sat-grid">
+      <span class="sat-field">NORAD ID</span>   <span class="sat-value">${catnr}</span>
+      <span class="sat-field">Int'l Des.</span>  <span class="sat-value">${intdes}</span>
+      <span class="sat-field">Country</span>     <span class="sat-value">${country}</span>
+      <span class="sat-field">Type</span>        <span class="sat-value">${type}</span>
+      <span class="sat-field">Launched</span>    <span class="sat-value">${launch}</span>
+    </div>
+    ${badge(status)}
+    <div class="orbit-row">
+      <div class="orbit-item"><span class="o-label">Period </span><span class="o-value">${period}</span></div>
+      <div class="orbit-item"><span class="o-label">Incl. </span><span class="o-value">${inc}</span></div>
+      <div class="orbit-item"><span class="o-label">Apogee </span><span class="o-value">${apogee}</span></div>
+      <div class="orbit-item"><span class="o-label">Perigee </span><span class="o-value">${perigee}</span></div>
+    </div>
+  </div>`;
 }
 
-// ── Celestrak fetchers ──────────────────────────────────────────────────
-
-async function fetchSatcat(params) {
-  params.FORMAT = "JSON";
-  const url = PROXY + encodeURIComponent(SATCAT_URL + "?" + new URLSearchParams(params));
-  const r = await fetch(url);
-  if (!r.ok) throw new Error("Celestrak " + r.status);
-  return r.json();
+function cardGP(s) {
+  const name  = s.OBJECT_NAME || "Unknown";
+  const catnr = s.NORAD_CAT_ID || "—";
+  const epoch = s.EPOCH ? s.EPOCH.slice(0,10) : "—";
+  const inc   = s.INCLINATION ? parseFloat(s.INCLINATION).toFixed(1)+"°" : "—";
+  const alt   = s.SEMIMAJOR_AXIS ? Math.round(parseFloat(s.SEMIMAJOR_AXIS)-6371)+" km" : "—";
+  return `<div class="result-card">
+    <div class="sat-name">${name}</div>
+    <div class="sat-grid">
+      <span class="sat-field">NORAD ID</span>    <span class="sat-value">${catnr}</span>
+      <span class="sat-field">TLE Epoch</span>   <span class="sat-value">${epoch}</span>
+      <span class="sat-field">Inclination</span> <span class="sat-value">${inc}</span>
+      <span class="sat-field">Altitude</span>    <span class="sat-value">${alt}</span>
+    </div>
+  </div>`;
 }
 
-async function fetchGP(params) {
-  params.FORMAT = "JSON";
-  const url = PROXY + encodeURIComponent(GP_URL + "?" + new URLSearchParams(params));
-  const r = await fetch(url);
-  if (!r.ok) throw new Error("Celestrak GP " + r.status);
-  return r.json();
-}
-
-async function runTool(name, inp) {
-  try {
-    if (name === "search_by_name") {
-      const d = await fetchSatcat({ NAME: inp.name, MAX: String(inp.max || 15) });
-      return { count: d.length, results: d };
-    }
-    if (name === "search_by_catnr") {
-      const d = await fetchSatcat({ CATNR: inp.catnr });
-      return { count: d.length, results: d };
-    }
-    if (name === "search_by_intdes") {
-      const d = await fetchSatcat({ INTDES: inp.intdes });
-      return { count: d.length, results: d };
-    }
-    if (name === "get_group") {
-      const d = await fetchGP({ GROUP: inp.group });
-      const s = d.slice(0, inp.max || 20);
-      return { total: d.length, shown: s.length, results: s };
-    }
-    return { error: "Unknown tool: " + name };
-  } catch(e) {
-    return { error: e.message };
-  }
-}
-
-// ── Claude agent loop ───────────────────────────────────────────────────
-
-const TOOLS = [
-  { name: "search_by_name",   description: "Search Celestrak SATCAT by satellite name (partial ok). E.g. 'ISS', 'Hubble', 'Starlink'.", input_schema: { type:"object", properties: { name:{type:"string",description:"Satellite name"}, max:{type:"number",description:"Max results, default 15"} }, required:["name"] } },
-  { name: "search_by_catnr",  description: "Search by NORAD catalog number e.g. '25544' for ISS.",    input_schema: { type:"object", properties: { catnr:{type:"string"} }, required:["catnr"] } },
-  { name: "search_by_intdes", description: "Search by International Designator e.g. '1998-067A'.",    input_schema: { type:"object", properties: { intdes:{type:"string"} }, required:["intdes"] } },
-  { name: "get_group",        description: "Get satellites by group name: starlink, oneweb, gps-ops, stations, active, debris, iridium, weather.", input_schema: { type:"object", properties: { group:{type:"string"}, max:{type:"number"} }, required:["group"] } }
-];
-
-async function callClaude(messages) {
-  const url = PROXY + encodeURIComponent(CLAUDE_URL);
-  const r = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      system: "You are a satellite tracking assistant with live access to the Celestrak SATCAT database. Use tools to search for satellites. Present results clearly including name, NORAD ID, country, launch date, and status. Status codes: + Active  - Inactive  P Partial  B Backup  D Decayed.",
-      tools: TOOLS,
-      messages,
-    })
-  });
-  const text = await r.text();
-  let data;
-  try { data = JSON.parse(text); } catch { throw new Error("Bad response: " + text.slice(0, 150)); }
-  if (!r.ok) throw new Error("Claude API " + r.status + ": " + (data?.error?.message || text.slice(0,150)));
-  return data;
-}
-
-async function send(text) {
-  text = text.trim();
-  if (!text || busy) return;
-  if (!apiKey) { alert("Please paste your Anthropic API key first!"); return; }
-
-  document.getElementById("input").value = "";
-  document.getElementById("chips").style.display = "none";
-  addMsg("user", text);
-  history.push({ role: "user", content: text });
+async function go(query, type) {
+  document.getElementById("search-input").value = query;
   setBusy(true);
-  setStatus("⟳ Thinking…");
-
-  let apiMsgs = history.map(m => ({ role: m.role, content: m.content }));
-
+  show(`<div class="info-bar">⟳ Searching for "${query}"…</div>`);
   try {
-    while (true) {
-      const data = await callClaude(apiMsgs);
-
-      if (data.stop_reason === "tool_use") {
-        apiMsgs.push({ role: "assistant", content: data.content });
-        const results = [];
-        for (const block of data.content) {
-          if (block.type !== "tool_use") continue;
-          setStatus("🔭 Searching Celestrak: " + block.name + "…");
-          const result = await runTool(block.name, block.input);
-          results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(result) });
-        }
-        apiMsgs.push({ role: "user", content: results });
-      } else {
-        const reply = data.content.filter(b => b.type === "text").map(b => b.text).join("");
-        setStatus(null);
-        addMsg("bot", reply);
-        history.push({ role: "assistant", content: reply });
-        break;
-      }
+    if (type === "catnr") {
+      const url = PROXY + encodeURIComponent(`${SATCAT}?CATNR=${query}&FORMAT=JSON`);
+      const d = await fetch(url).then(r => r.json());
+      show(d.length ? `<div class="info-bar">Found ${d.length} result${d.length>1?"s":""}</div>` + d.map(cardSatcat).join("") : `<div class="error-bar">No results found.</div>`);
+    } else if (type === "intdes") {
+      const url = PROXY + encodeURIComponent(`${SATCAT}?INTDES=${query}&FORMAT=JSON`);
+      const d = await fetch(url).then(r => r.json());
+      show(d.length ? `<div class="info-bar">Found ${d.length} result${d.length>1?"s":""}</div>` + d.map(cardSatcat).join("") : `<div class="error-bar">No results found.</div>`);
+    } else if (type === "group") {
+      const url = PROXY + encodeURIComponent(`${GP}?GROUP=${query}&FORMAT=JSON`);
+      const d = await fetch(url).then(r => r.json());
+      const slice = d.slice(0, 30);
+      show(`<div class="info-bar">Showing ${slice.length} of ${d.length} in group <b>${query}</b></div>` + slice.map(cardGP).join(""));
+    } else {
+      const url = PROXY + encodeURIComponent(`${SATCAT}?NAME=${encodeURIComponent(query)}&FORMAT=JSON&MAX=20`);
+      const d = await fetch(url).then(r => r.json());
+      show(d.length ? `<div class="info-bar">Found ${d.length} result${d.length>1?"s":""}</div>` + d.map(cardSatcat).join("") : `<div class="error-bar">No results for "${query}". Try a different name or NORAD ID.</div>`);
     }
   } catch(e) {
-    setStatus(null);
-    addMsg("bot", "❌ " + e.message);
+    show(`<div class="error-bar">❌ ${e.message}<br><br>Proxy may be temporarily unavailable. Try again in a moment.</div>`);
   }
-
   setBusy(false);
+}
+
+function search() {
+  const q = document.getElementById("search-input").value.trim();
+  if (!q) return;
+  if (/^\d{4,6}$/.test(q)) go(q, "catnr");
+  else if (/^\d{4}-\d{3}/.test(q)) go(q, "intdes");
+  else go(q, "name");
 }
 </script>
 </body>
